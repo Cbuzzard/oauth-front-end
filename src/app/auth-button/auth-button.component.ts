@@ -7,12 +7,12 @@ import { Component, OnInit } from '@angular/core';
 })
 export class AuthButtonComponent implements OnInit {
 
-  constructor() { }
-
   public gapiSetup: boolean = false; // marks if the gapi library has been loaded
   public authInstance: gapi.auth2.GoogleAuth;
   public error: string;
   public user: gapi.auth2.GoogleUser;
+
+  constructor() { }
 
   async ngOnInit() {
     if (await this.checkIfUserAuthenticated()) {
@@ -20,33 +20,47 @@ export class AuthButtonComponent implements OnInit {
     }
   }
 
+  signOut() {
+    var auth2 = gapi.auth2.getAuthInstance();
+    auth2.signOut().then(function () {
+      console.log('User signed out.');
+    });
+  }
+
+
   async initGoogleAuth(): Promise<void> {
-    //  Create a new Promise where the resolve 
-    // function is the callback passed to gapi.load
     const pload = new Promise((resolve) => {
       gapi.load('auth2', resolve);
+      gapi.signin2.render("testid", {})
     });
 
-    // When the first promise resolves, it means we have gapi
-    // loaded and that we can call gapi.init
     return pload.then(async () => {
       await gapi.auth2
         .init({ client_id: '428759163089-0un7vcmrckisnvpt06hqr6v1orbmmap0.apps.googleusercontent.com' })
         .then(auth => {
           this.gapiSetup = true;
           this.authInstance = auth;
-          console.log(auth);
+          console.log(auth.currentUser.get().getAuthResponse().id_token);
         });
     });
   }
 
+  sendRequest() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', 'http://localhost:8080/login');
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.setRequestHeader('X-ID-TOKEN', this.user.getAuthResponse().id_token);
+    xhr.onload = function() {
+      console.log('Signed in as: ' + xhr.responseText);
+    };
+    xhr.send();
+  }
+
   async authenticate(): Promise<gapi.auth2.GoogleUser> {
-    // Initialize gapi if not done yet
     if (!this.gapiSetup) {
       await this.initGoogleAuth();
     }
 
-    // Resolve or reject signin Promise
     return new Promise(async () => {
       await this.authInstance.signIn().then(
         user => this.user = user,
@@ -55,7 +69,6 @@ export class AuthButtonComponent implements OnInit {
   }
 
   async checkIfUserAuthenticated(): Promise<boolean> {
-    // Initialize gapi if not done yet
     if (!this.gapiSetup) {
       await this.initGoogleAuth();
     }
