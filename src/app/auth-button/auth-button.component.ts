@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-auth-button',
@@ -11,8 +12,9 @@ export class AuthButtonComponent implements OnInit {
   public authInstance: gapi.auth2.GoogleAuth;
   public error: string;
   public user: gapi.auth2.GoogleUser;
+  public status: any = "none";
 
-  constructor() { }
+  constructor(private http:HttpClient) { }
 
   async ngOnInit() {
     if (await this.checkIfUserAuthenticated()) {
@@ -20,9 +22,18 @@ export class AuthButtonComponent implements OnInit {
     }
   }
 
+  getKims() {
+    this.http.get("http://localhost:8080/rest/kim").subscribe(result => this.status = JSON.stringify(result))
+    // var xmlHttp = new XMLHttpRequest();
+    // xmlHttp.open( "GET", 'http://localhost:8080/rest/kim'); // false for synchronous request
+    // xmlHttp.onload = () => {status = JSON.parse(xmlHttp.responseText);}
+    // xmlHttp.send();
+  }
+
   signOut() {
     var auth2 = gapi.auth2.getAuthInstance();
     auth2.signOut().then(function () {
+      sessionStorage.clear();
       console.log('User signed out.');
     });
   }
@@ -51,7 +62,8 @@ export class AuthButtonComponent implements OnInit {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     xhr.setRequestHeader('X-ID-TOKEN', this.user.getAuthResponse().id_token);
     xhr.onload = function() {
-      console.log('Signed in as: ' + xhr.responseText);
+      sessionStorage.setItem('token', xhr.getResponseHeader('Authorization'))
+      console.log('Signed in as: ' + xhr.getResponseHeader('Authorization'));
     };
     xhr.send();
   }
